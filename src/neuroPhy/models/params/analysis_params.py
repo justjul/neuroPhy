@@ -36,10 +36,10 @@ CustomParameters
 from dataclasses import dataclass, field
 from typing import Any
 
-
 # ---------------------------------------------------------------------------
 # PredictorParameters
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class PredictorParameters:
@@ -191,6 +191,21 @@ class OutputParameters:
         default_factory=list)  # unit/channel filters
 
 
+@dataclass
+class ShuffleParameters:
+    nShf: int = 0
+    shftype: str = "random shift"
+    FshfZvsXY: bool = False
+
+
+@dataclass
+class CrossValParameters:
+    kfold: int = 20
+    Fbestmodel: bool = False
+    Fdiscarditer: bool = True
+    Fdiscardpred: bool = True
+
+
 # ---------------------------------------------------------------------------
 # MapParameters
 # ---------------------------------------------------------------------------
@@ -288,19 +303,10 @@ class MapParameters:
     Fratemap: bool = True        # True = rate map (Hz); False = count map
 
     # Shuffle controls
-    shuffle: dict[str, Any] = field(default_factory=lambda: {
-        "nShf": 0,               # number of shuffle iterations (0 = off)
-        "shftype": "random shift",  # 'random shift' | 'random perm'
-        "FshfZvsXY": False,      # True = permute Z axis only
-    })
+    shuffle: dict[str, Any] = field(default_factory=ShuffleParameters)
 
     # Cross-validation
-    crossvalidation: dict[str, Any] = field(default_factory=lambda: {
-        "kfold": 20,             # number of CV folds
-        "Fbestmodel": False,     # True = best fold; False = full-data model
-        "Fdiscarditer": True,    # discard per-fold curves to save memory
-        "Fdiscardpred": True,    # discard per-sample predictions to save memory
-    })
+    crossvalidation: dict[str, Any] = field(default_factory=CrossValParameters)
 
     # Data subset conditions [origin, field, value, operator, split_by_value]
     subsetInfo: list[list[Any]] = field(default_factory=list)
@@ -445,20 +451,15 @@ class GLMParameters:
     OccTrialThresh: int = 1          # minimum trials per bin
 
     # Shuffle and cross-validation
-    shuffle: dict[str, Any] = field(default_factory=lambda: {
-        "nShf": 0,                   # shuffle iterations (0 = off)
-        "shftype": "random shift",   # 'random shift' | 'random perm'
-    })
-    crossvalidation: dict[str, Any] = field(default_factory=lambda: {
-        "kfold": 10,                 # number of CV folds
-        "Fbestmodel": False,         # True = use best-fold model
-    })
+    shuffle: dict[str, Any] = field(default_factory=ShuffleParameters)
+    crossvalidation: dict[str, Any] = field(default_factory=CrossValParameters)
 
     # Regularization (elastic net)
     regularization: dict[str, Any] = field(default_factory=lambda: {
         "nlambda": 0,                # lambda grid size (0 = no regularisation)
         "alpha": 1.0,                # mixing: 0 = ridge, 1 = lasso
     })
+
     maxit: int = 10000               # max coordinate-descent iterations
     thresh: float = 0.001            # convergence tolerance
     Fstandardize: bool = True        # z-score predictors before fitting
@@ -585,10 +586,7 @@ class DecoderParameters:
     FuniformPrior: bool = True       # True = flat prior; False = empirical
 
     # Cross-validation of the encoding model
-    crossvalidation: dict[str, Any] = field(default_factory=lambda: {
-        "kfold": 10,                 # number of CV folds
-        "Fbestmodel": False,         # True = use best-fold model
-    })
+    crossvalidation: dict[str, Any] = field(default_factory=CrossValParameters)
 
     # Data subset conditions
     TrainingSubsetInfo: list[list[Any]] = field(default_factory=list)

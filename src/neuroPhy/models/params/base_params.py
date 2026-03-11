@@ -3,7 +3,8 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-from analysis_params import (
+
+from .analysis_params import (
     CustomParameters,
     DecoderParameters,
     GLMParameters,
@@ -11,8 +12,8 @@ from analysis_params import (
     OutputParameters,
     PredictorParameters,
 )
-from load_params import LoadParameters
-from plot_params import PlotParametersBehavior, PlotParametersCells, PlotParametersDecoder
+from .load_params import LoadParameters
+from .plot_params import PlotParametersBehavior, PlotParametersCells, PlotParametersDecoder
 
 # ---------------------------------------------------------------------------
 # Helpers
