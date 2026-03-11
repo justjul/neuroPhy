@@ -1,0 +1,555 @@
+
+# neuroPhy Parameters Configuration
+# This file defines parameters for loading and analyzing neurophysiology data
+
+# ============================================================================
+# Load Default Parameters
+# ============================================================================
+
+load:
+  project_dir: '/mnt/d/DATA/MaiData/'
+  path_explorer: 'getDataPath'
+  sync_signal: 'behavior'
+  subsetInfo:
+      - [Spk, Goodcluster, 1, "="]                # Load only Goodclusters
+      - [Spk, Probe, 1, "="]                      # Load only cells from Probe #1
+      - [Lfp, Channel, 1, "="]                    # Load LFP from channel #1 only
+
+
+
+# ============================================================================
+# Map Analysis Parameters
+# ============================================================================
+# Define multiple map configurations for different analyses
+# Each entry creates a separate cross-validated spatial map
+
+maps_params:
+  # Example 1: Standard 2D place field map
+  - name: place_field_2D
+    # Variable origins - where to find variables in EXP structure
+    varXorigin: Beh          # X variable from behavioral data
+    varYorigin: Beh          # Y variable from behavioral data  
+    varZorigin: none         # No Z variable (2D map)
+    varOorigin: Spk          # Output variable from spike data
+    
+    # Variable names - specific fields to use
+    varXname: XPercent       # X position (percentage of track)
+    varYname: YPercent       # Y position (percentage of track)
+    varZname: none           
+    varOname: spikeTrain     # Spike train data
+    
+    # Temporal smoothing
+    Tsmthwin: 0.0           # Time smoothing window (seconds), 0 = no smoothing
+    
+    # Occupancy thresholds
+    OccThresh: 0.3          # Minimum time in bin (seconds)
+    OccTrialThresh: 0       # Minimum trials per bin
+    
+    # X axis discretization
+    Xbinsize: 2.0           # Bin size for X
+    XsmthNbins: 2           # Smoothing window size (bins)
+    Xrange: [0.0, 100.0]    # Min/max range
+    Xbinedges: null         # If null, will be computed from range and binsize
+    FclampX: false          # Clamp values within Xrange
+    FcircularX: false       # Is X circular (e.g., head direction)
+    
+    # Y axis discretization
+    Ybinsize: 2.0
+    YsmthNbins: 2
+    Yrange: [0.0, 100.0]
+    Ybinedges: null
+    FclampY: false
+    FcircularY: false
+    
+    # Z axis (not used for 2D maps)
+    Zbinsize: null
+    ZsmthNbins: null
+    Zrange: null
+    Zbinedges: null
+    FclampZ: false
+    FcircularZ: false
+    
+    # Output type
+    Fratemap: true          # Express as firing rate map (Hz)
+    
+    # Shuffle controls for significance testing
+    nShf: 100               # Number of shuffle iterations (0 = no shuffling)
+    shftype: random shift   # 'random shift' or 'random perm'
+    FshfZvsXY: false        # Only permute along Z axis
+    
+    # Cross-validation
+    kfold: 20               # Number of CV folds
+    Fbestmodel: false       # Use best fold (true) or full data model (false)
+    Fdiscarditer: true      # Discard fold-specific curves to save space
+    Fdiscardpred: true      # Discard predictions to save space
+    
+    # Data subset conditions
+    # Format: [origin, field_name, value, operator, split_by_value]
+    subsetInfo:
+      - [Beh, contrast, [0, 1], "=", false]       # Include all contrast values
+      - [Beh, outcome, 2, "=", false]             # Only correct trials
+      - [Beh, smthRunSpeed, 2.5, ">", false]      # Only when running
+      - [Beh, blanks, 0, "=", false]              # Exclude blank trials
+      - [Beh, gain, [0.4, 0.5, 0.6], "=", true]   # Separate maps per gain
+      - [none, none, null, "=", false]
+    
+    # Cell subset conditions
+    outputsubsetInfo:
+      - [none, none, null, "="]
+    
+    # Analysis functions
+    fun_cvmaps: ComputeCVMaps       # Function to compute maps
+    fun_tuningstats: getTuningStats  # Function to compute statistics
+
+  # Example 2: 1D head direction map
+  - name: head_direction_1D
+    varXorigin: Beh
+    varYorigin: none         # No Y variable = 1D map
+    varZorigin: none
+    varOorigin: Spk
+    varXname: HeadDirection  # Head direction in radians
+    varYname: none
+    varZname: none
+    varOname: spikeTrain
+    Tsmthwin: 0.0
+    OccThresh: 0.1
+    OccTrialThresh: 0
+    Xbinsize: 0.1745        # ~10 degrees
+    XsmthNbins: 3
+    Xrange: [0.0, 6.2832]   # 0 to 2π
+    Xbinedges: null         # Will be computed from range and binsize
+    FclampX: false
+    FcircularX: true        # Head direction is circular!
+    Ybinsize: null
+    YsmthNbins: null
+    Yrange: null
+    Ybinedges: null
+    FclampY: false
+    FcircularY: false
+    Zbinsize: null
+    ZsmthNbins: null
+    Zrange: null
+    Zbinedges: null
+    FclampZ: false
+    FcircularZ: false
+    Fratemap: true
+    nShf: 100
+    shftype: random shift
+    FshfZvsXY: false
+    kfold: 10
+    Fbestmodel: false
+    Fdiscarditer: true
+    Fdiscardpred: true
+    subsetInfo:
+      - [Beh, smthRunSpeed, 5.0, ">", false]  # Only when running fast
+      - [none, none, null, "=", false]
+    outputsubsetInfo:
+      - [none, none, null, "="]
+    fun_cvmaps: ComputeCVMaps
+    fun_tuningstats: getTuningStats
+
+# ============================================================================
+# GLM Analysis Parameters  
+# ============================================================================
+# Define multiple GLM configurations
+# Each GLM can have up to 10 predictors (indexed 0-9)
+
+glms_params:
+  # Example 1: Position + Speed GLM
+  - name: position_speed_GLM
+    distribution: poisson    # 'poisson' or 'gaussian'
+    PerfMeasure: nLLH       # Performance metric: 'nLLH', 'BIC', 'AIC', 'none'
+    pvalthresh: 0.05        # P-value threshold for model comparison
+    
+    # Predictor-specific parameters (lists with 10 entries, one per predictor)
+    # Predictor 0: X position
+    # Predictor 1: Y position  
+    # Predictor 2: Speed
+    # Predictors 3-9: Unused
+    
+    Flinear: [false, false, true, false, false, false, false, false, false, false]
+    TimeRange: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]  # Time delay range (ms)
+    TimeStep: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]   # Time step for delays
+    TsmthNbins: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0] # Time smoothing bins
+    
+    varXorigin: [Beh, Beh, Beh, none, none, none, none, none, none, none]
+    varYorigin: [Beh, Beh, none, none, none, none, none, none, none, none]
+    varZorigin: [none, none, none, none, none, none, none, none, none, none]
+    
+    varXname: [XPercent, XPercent, speed, none, none, none, none, none, none, none]
+    varYname: [YPercent, YPercent, none, none, none, none, none, none, none, none]
+    varZname: [none, none, none, none, none, none, none, none, none, none]
+    
+    Xbinsize: [5, 5, null, null, null, null, null, null, null, null]
+    XsmthNbins: [1, 1, null, null, null, null, null, null, null, null]
+    Xrange: [[0, 100], [0, 100], null, null, null, null, null, null, null, null]
+    Xbinedges: [null, null, null, null, null, null, null, null, null, null]
+    FcircularX: [false, false, false, false, false, false, false, false, false, false]
+    FclampX: [false, false, false, false, false, false, false, false, false, false]
+    
+    Ybinsize: [5, 5, null, null, null, null, null, null, null, null]
+    YsmthNbins: [1, 1, null, null, null, null, null, null, null, null]
+    Yrange: [[0, 100], [0, 100], null, null, null, null, null, null, null, null]
+    Ybinedges: [null, null, null, null, null, null, null, null, null, null]
+    FcircularY: [false, false, false, false, false, false, false, false, false, false]
+    FclampY: [false, false, false, false, false, false, false, false, false, false]
+    
+    Zbinsize: [null, null, null, null, null, null, null, null, null, null]
+    ZsmthNbins: [null, null, null, null, null, null, null, null, null, null]
+    Zrange: [null, null, null, null, null, null, null, null, null, null]
+    Zbinedges: [null, null, null, null, null, null, null, null, null, null]
+    FcircularZ: [false, false, false, false, false, false, false, false, false, false]
+    FclampZ: [false, false, false, false, false, false, false, false, false, false]
+    
+    Fratemap: true
+    FalwaysIn: [false, false, false, false, false, false, false, false, false, false]
+    Fremovenan: [false, false, false, false, false, false, false, false, false, false]
+    
+    # Output variable
+    varOorigin: Spk
+    varOname: spikeTrain
+    
+    # Spike history filter
+    Fhistory: false         # Include spike history
+    historyRange: [0.01, 0.1]  # History time range (seconds)
+    historyStep: 0.01
+    historysmthNbins: 1
+    
+    # General parameters
+    Fintercept: true        # Include intercept term
+    Tsmthwin: 0.0
+    OccThresh: 0.3
+    OccTrialThresh: 1
+    
+    # Shuffle and CV
+    nShf: 0
+    shftype: random shift
+    kfold: 10
+    
+    # Regularization (elastic net)
+    nlambda: 0              # Number of lambda values (0 = no regularization)
+    maxit: 10000            # Max iterations
+    thresh: 0.001           # Convergence threshold
+    alpha: 1.0              # Elastic net: 0=ridge, 1=lasso
+    Fstandardize: true      # Standardize predictors
+    
+    # Output control
+    Fdiscarditer: true
+    Fdiscardpred: true
+    
+    # Data subset
+    subsetInfo:
+      - [Beh, contrast, [0, 1], "=", false]
+      - [Beh, outcome, 2, "=", false]
+      - [Beh, smthRunSpeed, 5, ">", false]
+      - [Beh, blanks, 0, "=", false]
+      - [Beh, gain, 1, "=", true]
+      - [Beh, none, null, "=", false]
+    
+    outputsubsetInfo:
+      - [Spk, Probe, 1, "="]
+    
+    # Functions
+    fun_glms: RunGLMs
+    fun_tuningstats: getTuningStats
+
+  # Example 2: Simpler position-only GLM
+  - name: position_only_GLM
+    distribution: poisson
+    PerfMeasure: BIC
+    pvalthresh: 0.05
+    Flinear: [false, false, false, false, false, false, false, false, false, false]
+    TimeRange: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    TimeStep: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    TsmthNbins: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    varXorigin: [Beh, none, none, none, none, none, none, none, none, none]
+    varYorigin: [Beh, none, none, none, none, none, none, none, none, none]
+    varZorigin: [none, none, none, none, none, none, none, none, none, none]
+    varXname: [XPercent, none, none, none, none, none, none, none, none, none]
+    varYname: [YPercent, none, none, none, none, none, none, none, none, none]
+    varZname: [none, none, none, none, none, none, none, none, none, none]
+    Xbinsize: [10, null, null, null, null, null, null, null, null, null]
+    XsmthNbins: [1, null, null, null, null, null, null, null, null, null]
+    Xrange: [[0, 100], null, null, null, null, null, null, null, null, null]
+    Xbinedges: [null, null, null, null, null, null, null, null, null, null]
+    FcircularX: [false, false, false, false, false, false, false, false, false, false]
+    FclampX: [false, false, false, false, false, false, false, false, false, false]
+    Ybinsize: [10, null, null, null, null, null, null, null, null, null]
+    YsmthNbins: [1, null, null, null, null, null, null, null, null, null]
+    Yrange: [[0, 100], null, null, null, null, null, null, null, null, null]
+    Ybinedges: [null, null, null, null, null, null, null, null, null, null]
+    FcircularY: [false, false, false, false, false, false, false, false, false, false]
+    FclampY: [false, false, false, false, false, false, false, false, false, false]
+    Zbinsize: [null, null, null, null, null, null, null, null, null, null]
+    ZsmthNbins: [null, null, null, null, null, null, null, null, null, null]
+    Zrange: [null, null, null, null, null, null, null, null, null, null]
+    Zbinedges: [null, null, null, null, null, null, null, null, null, null]
+    FcircularZ: [false, false, false, false, false, false, false, false, false, false]
+    FclampZ: [false, false, false, false, false, false, false, false, false, false]
+    Fratemap: true
+    FalwaysIn: [false, false, false, false, false, false, false, false, false, false]
+    Fremovenan: [false, false, false, false, false, false, false, false, false, false]
+    varOorigin: Spk
+    varOname: spikeTrain
+    Fhistory: false
+    historyRange: [0.01, 0.1]
+    historyStep: 0.01
+    historysmthNbins: 1
+    Fintercept: true
+    Tsmthwin: 0.0
+    OccThresh: 0.3
+    OccTrialThresh: 1
+    nShf: 0
+    shftype: random shift
+    kfold: 10
+    nlambda: 0
+    maxit: 10000
+    thresh: 0.001
+    alpha: 1.0
+    Fstandardize: true
+    Fdiscarditer: true
+    Fdiscardpred: true
+    subsetInfo:
+      - [Beh, smthRunSpeed, 5, ">", false]
+      - [Beh, none, null, "=", false]
+    outputsubsetInfo:
+      - [Spk, Probe, 1, "="]
+    fun_glms: RunGLMs
+    fun_tuningstats: getTuningStats
+
+# ============================================================================
+# Decoder Analysis Parameters
+# ============================================================================
+# Define multiple decoder configurations
+# Each decoder can decode up to 10 variables simultaneously
+
+decoders_params:
+  # Example 1: 2D Position Bayesian Decoder
+  - name: position_decoder_2D
+    type: Bayes              # 'Bayes', 'Linear', or 'ANN'
+    
+    # Decoded variables (lists with 10 entries)
+    # Variable 0: X position
+    # Variable 1: Y position
+    # Variables 2-9: Unused
+    varXorigin: [Beh, Beh, none, none, none, none, none, none, none, none]
+    varYorigin: [Beh, Beh, none, none, none, none, none, none, none, none]
+    varPorigin: Spk          # Predictor origin
+    
+    varXname: [XPercent, XPercent, none, none, none, none, none, none, none, none]
+    varYname: [YPercent, YPercent, none, none, none, none, none, none, none, none]
+    varPname: spikeTrain     # Predictor field name
+    
+    # Time windows (milliseconds)
+    Tdecwin: 250.0          # Decoding window size
+    Tmemorywin: 0.0         # Memory window for temporal integration
+    Tsmthwin: 0.0           # Temporal smoothing window
+    
+    # Occupancy thresholds
+    OccThresh: 300.0
+    OccTrialThresh: 0
+    
+    # X variable discretization (per decoded variable)
+    Xbinsize: [5.0, 5.0, null, null, null, null, null, null, null, null]
+    Xsmthwin: [5.0, 5.0, null, null, null, null, null, null, null, null]
+    Xrange: [[0, 100], [0, 100], null, null, null, null, null, null, null, null]
+    FcircularX: [false, false, false, false, false, false, false, false, false, false]
+    FindexedX: [false, false, false, false, false, false, false, false, false, false]
+    
+    # Y variable discretization
+    Ybinsize: [5.0, 5.0, null, null, null, null, null, null, null, null]
+    Ysmthwin: [5.0, 5.0, null, null, null, null, null, null, null, null]
+    Yrange: [[0, 100], [0, 100], null, null, null, null, null, null, null, null]
+    FcircularY: [false, false, false, false, false, false, false, false, false, false]
+    FindexedY: [false, false, false, false, false, false, false, false, false, false]
+    
+    # Decoder options
+    FalwaysGLM: true        # Always use GLM for encoding model
+    PerfMeasure: nlogL      # Model selection metric
+    FKOdecoding: true       # Perform knockout decoding (contribution maps)
+    FuniformPrior: true     # Use uniform prior distribution
+    
+    # Cross-validation
+    kfold: 10
+    
+    # Training subset
+    TrainingSubsetInfo:
+      - [Beh, contrast, [0, 1], "=", false]
+      - [Beh, outcome, [0, 1, 2], "=", false]
+      - [Beh, smthRunSpeed, 2.5, ">", false]
+      - [Beh, blanks, 0, "=", false]
+      - [Beh, stim, 0, "=", false]
+      - [Beh, gain, 1, "=", false]
+    
+    # Predictor subset (which cells to use)
+    PredictorSubsetInfo:
+      - [Spk, Probe, 1, "=", true]
+      - [none, none, null, "=", false]
+
+  # Example 2: 1D Head Direction Decoder
+  - name: head_direction_decoder_1D
+    type: Bayes
+    varXorigin: [Beh, none, none, none, none, none, none, none, none, none]
+    varYorigin: [none, none, none, none, none, none, none, none, none, none]
+    varPorigin: Spk
+    varXname: [HeadDirection, none, none, none, none, none, none, none, none, none]
+    varYname: [none, none, none, none, none, none, none, none, none, none]
+    varPname: spikeTrain
+    Tdecwin: 250.0
+    Tmemorywin: 0.0
+    Tsmthwin: 0.0
+    OccThresh: 100.0
+    OccTrialThresh: 0
+    Xbinsize: [0.1745, null, null, null, null, null, null, null, null, null]  # ~10 degrees
+    Xsmthwin: [3.0, null, null, null, null, null, null, null, null, null]
+    Xrange: [[0, 6.2832], null, null, null, null, null, null, null, null, null]  # 0 to 2π
+    FcircularX: [true, false, false, false, false, false, false, false, false, false]  # Circular!
+    FindexedX: [false, false, false, false, false, false, false, false, false, false]
+    Ybinsize: [null, null, null, null, null, null, null, null, null, null]
+    Ysmthwin: [null, null, null, null, null, null, null, null, null, null]
+    Yrange: [null, null, null, null, null, null, null, null, null, null]
+    FcircularY: [false, false, false, false, false, false, false, false, false, false]
+    FindexedY: [false, false, false, false, false, false, false, false, false, false]
+    FalwaysGLM: false
+    PerfMeasure: nlogL
+    FKOdecoding: true
+    FuniformPrior: true
+    kfold: 10
+    TrainingSubsetInfo:
+      - [Beh, smthRunSpeed, 5.0, ">", false]
+      - [none, none, null, "=", false]
+    PredictorSubsetInfo:
+      - [Spk, Probe, 1, "=", false]
+      - [none, none, null, "=", false]
+
+# ============================================================================
+# Custom Analysis Parameters
+# ============================================================================
+# Define custom user-defined analyses
+# These call user-specified functions with custom parameters
+
+custom_params: []  # Empty by default - add your custom analyses here
+
+# Example custom analysis (commented out):
+# - name: my_custom_analysis
+#   functionName: myCustomFunction
+#   functionParams:
+#     param1: value1
+#     param2: value2
+#   subsetInfo:
+#     - [Beh, gain, 1, "=", false]
+
+# ============================================================================
+# Plot Parameters - Single Cells Page
+# ============================================================================
+plot_params_cells:
+  PageTitle: Single Cells
+  Page: 1
+  DialogWindow: 1         # Dialog on left
+  Window: 2               # Plots on right
+  Foverlap: false        # Separate subplots
+  colormap: hot          # Colormap for matrices
+  ChosenCell: 1          # Default selected cell
+  FpoolCell: false       # Don't pool cells
+  ChosenVarXorigin: Beh
+  ChosenVarXname: XPercent
+  ChosenVarYorigin: Beh
+  ChosenVarYname: YPercent
+  ChosenVarCorigin: Beh
+  ChosenVarCname: none
+  
+  # Available plot types
+  PlotObjList:
+    - [Raster, true, PlotRaster, null, null]
+    - [Raster_mat, false, PlotRaster_matdisp, null, null]
+    - [fast1Dmap, true, PlotFast1Dmaps, null, null]
+  
+  # Dialog subset parameters
+  Dialog_params:
+    - [Beh, contrast, 1, "=", false]
+    - [Beh, gain, 1, "=", true]
+    - [Beh, outcome, [0, 1, 2], "=", false]
+    - [Beh, smthRunSpeed, 2.5, ">", true]
+    - [Beh, condition, [1, 2, 3, 4, 5], "=", false]
+  
+  # Fixed parameters (not shown in dialog)
+  fixed_params:
+    - [Beh, blanks, 0, "="]
+    - [Beh, stim, 0, "="]
+
+# ============================================================================
+# Plot Parameters - Decoding Page
+# ============================================================================
+plot_params_decoder:
+  PageTitle: Decoding
+  Page: 2
+  DialogWindow: 1
+  Window: 2
+  Foverlap: false
+  Clim: [0.0, 2.0]       # Z-axis limits for matrices
+  Flogscale: false       # Use log scale for Z
+  colormap: RedWhiteBlue
+  Xsmthwin: 2.0         # Spatial smoothing
+  
+  PlotObjList:
+    - [Decoding Error (mean), true, PlotDecoders, [1, 2], null]
+    - [Decoding Error (max), false, PlotDecoders, [1, 1], null]
+    - [Decoded Position (mean), false, PlotDecoders, [2, 2], null]
+    - [Decoded Position (max), false, PlotDecoders, [2, 1], null]
+  
+  Dialog_params:
+    - [Beh, contrast, 0, "=", false]
+    - [Beh, gain, 1, "=", true]
+    - [Beh, outcome, [0, 1, 2], "=", false]
+    - [Beh, smthRunSpeed, 2.5, ">", true]
+    - [Beh, condition, [1, 2, 3, 4, 5], "=", false]
+  
+  Predictor_params:
+    - [Spk, Probe, 1, "=", false]
+  
+  fixed_params:
+    - [Beh, blanks, 0, "="]
+    - [Beh, stim, 0, "="]
+
+# ============================================================================
+# Plot Parameters - Behavior Page
+# ============================================================================
+plot_params_behavior:
+  PageTitle: Behavior
+  Page: 3
+  DialogWindow: 1
+  Window: 2
+  Foverlap: false
+  colormap: cool
+  ChosenVarXorigin: Beh
+  ChosenVarXname: XPercent
+  ChosenVarYorigin: Beh
+  ChosenVarYname: YPercent
+  
+  # Lick event display options [name, show, RGB color]
+  PlotLick:
+    - [lick, false, [0, 0, 0]]
+    - [firstbadlick, false, [1, 0, 0]]
+    - [firstgoodlick, true, [0, 1, 0]]
+    - [firstrewlick, false, [0.5, 0.5, 0.5]]
+    - [postRewlick, false, [0.5, 0.5, 0.5]]
+    - [preRewlick, false, [0.5, 0.5, 0.5]]
+    - [badlick, false, [1, 0, 0]]
+    - [passivelick, false, [0, 0, 1]]
+    - [reward, false, [1, 0, 1]]
+  
+  PlotObjList:
+    - [Plot Y vs. X, true, PlotBehavLicks, null, null]
+    - [fast1Dmap, false, PlotBehavFast1Dmaps, null, null]
+    - [X x Time, false, PlotBehavLicks, sampleTimes, X]
+  
+  Dialog_params:
+    - [Beh, contrast, 0.5, "=", false]
+    - [Beh, gain, 0.5, "=", true]
+    - [Beh, outcome, 2, "=", false]
+    - [Beh, smthRunSpeed, 0, ">", true]
+    - [Beh, none, null, "=", false]
+  
+  fixed_params:
+    - [Beh, blanks, 0, "="]
+    - [none, none, null, "="]

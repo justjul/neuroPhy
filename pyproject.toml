@@ -1,0 +1,104 @@
+
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "neuroPhy"
+version = "0.1.0"
+description = "Toolbox for neurophysiological signals and behavior"
+authors = [
+    {name = "Julien Fournier", email = "justjules.fournier@gmail.com"}
+]
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.12"
+
+dependencies = [
+    # Core scientific computing
+    "numpy",
+    "scipy",
+    "pandas",
+    "scikit-learn",
+    
+    "fastapi",
+    "uvicorn",
+    "pydantic",
+
+    "pyarrow",
+    "python-dotenv",
+    "pyyaml",
+    "python-multipart",
+    "python-dateutil",
+    "python-json-logger",
+
+    "aiofiles",
+    "tqdm",
+    "fire",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-cov",
+    "pytest-asyncio",
+    "black",
+    "ruff",
+    "mypy",
+    "ipython",
+    "ipdb",
+]
+
+front = [
+    "dash",
+    "dash-bootstrap-components",
+    "plotly",
+    "httpx",
+    "python-dotenv",
+]
+
+viz = [
+    "matplotlib",
+    "seaborn",
+]
+
+# Production deployment
+prod = [
+    "gunicorn",
+    "redis",
+]
+
+# Full installation with all extras
+all = [
+    "neuroPhy[dev,front, viz,prod]",
+]
+
+[project.urls]
+Homepage = "https://github.com/justjul/neuroPhy"
+Documentation = "https://neuroPhy.readthedocs.io"
+Repository = "https://github.com/justjul/neuroPhy"
+Issues = "https://github.com/justjul/neuroPhy/issues"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+packages = ["neuroPhy", "neuroPhy.core", "neuroPhy.analysis", "neuroPhy.api", "neuroPhy.utils"]
+
+[tool.black]
+line-length = 100
+target-version = ['py311']
+include = '\.pyi?$'
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src"]
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "B", "C4", "UP", "ARG", "SIM"]
+ignore = ["E501", "B008", "C901"]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401", "F403"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["neuroPhy"]
